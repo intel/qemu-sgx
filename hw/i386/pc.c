@@ -1337,6 +1337,7 @@ void pc_memory_init(PCMachineState *pcms,
     int linux_boot, i;
     MemoryRegion *ram, *option_rom_mr;
     MemoryRegion *ram_below_4g, *ram_above_4g;
+    MemoryRegion *epc;
     FWCfgState *fw_cfg;
     MachineState *machine = MACHINE(pcms);
     PCMachineClass *pcmc = PC_MACHINE_GET_CLASS(pcms);
@@ -1367,6 +1368,13 @@ void pc_memory_init(PCMachineState *pcms,
         memory_region_add_subregion(system_memory, 0x100000000ULL,
                                     ram_above_4g);
         e820_add_entry(0x100000000ULL, pcms->above_4g_mem_size, E820_RAM);
+    }
+    if (pcms->epc_size > 0) {
+        epc = g_malloc(sizeof(*epc));
+        memory_region_init_sgx_epc(epc, OBJECT(pcms), "epc", pcms->epc_size);
+        memory_region_add_subregion(system_memory, pcms->epc_base, epc);
+        memory_region_set_enabled(epc, true);
+        e820_add_entry(pcms->epc_base, pcms->epc_size, E820_RESERVED);
     }
 
     if (!pcmc->has_reserved_memory &&
@@ -1400,8 +1408,14 @@ void pc_memory_init(PCMachineState *pcms,
             exit(EXIT_FAILURE);
         }
 
+        if (pcms->epc_base >= 0x100000000ULL) {
+            machine->device_memory->base = pcms->epc_base + pcms->epc_size;
+        } else {
+            machine->device_memory->base =
+                0x100000000ULL + pcms->above_4g_mem_size;
+        }
         machine->device_memory->base =
-            ROUND_UP(0x100000000ULL + pcms->above_4g_mem_size, 1 * GiB);
+            ROUND_UP(machine->device_memory->base, 1 * GiB);
 
         if (pcmc->enforce_aligned_dimm) {
             /* size device region assuming 1G page max alignment per slot */
@@ -1480,6 +1494,8 @@ uint64_t pc_pci_hole64_start(void)
         if (!pcmc->broken_reserved_end) {
             hole64_start += memory_region_size(&ms->device_memory->mr);
         }
+    } else if (pcms->epc_base >= 0x100000000ULL) {
+            hole64_start = pcms->epc_base + pcms->epc_size;
     } else {
         hole64_start = 0x100000000ULL + pcms->above_4g_mem_size;
     }
@@ -2266,6 +2282,47 @@ static void pc_machine_set_pit(Object *obj, bool value, Error **errp)
     pcms->pit = value;
 }
 
+static void pc_machine_get_epc_base(Object *obj, Visitor *v, const char *name,
+                                    void *opaque, Error **errp)
+{
+    PCMachineState *pcms = PC_MACHINE(obj);
+    uint64_t value = pcms->epc_base;
+
+    visit_type_size(v, name, &value, errp);
+}
+
+static void pc_machine_get_epc_size(Object *obj, Visitor *v, const char *name,
+                                    void *opaque, Error **errp)
+{
+    PCMachineState *pcms = PC_MACHINE(obj);
+    uint64_t value = pcms->epc_size;
+
+    visit_type_size(v, name, &value, errp);
+}
+
+static void pc_machine_set_epc_size(Object *obj, Visitor *v, const char *name,
+                                    void *opaque, Error **errp)
+{
+    PCMachineState *pcms = PC_MACHINE(obj);
+    Error *error = NULL;
+    uint64_t value;
+
+    visit_type_size(v, name, &value, &error);
+    if (error) {
+        error_propagate(errp, error);
+        return;
+    }
+    if (value & 0xfff) {
+        error_setg(&error,
+                   "Machine option '" PC_MACHINE_EPC_SIZE "=%"PRIx64"' must "
+                   "be a multiple of 0x1000 (4k page granularity)", value);
+        error_propagate(errp, error);
+        return;
+    }
+
+    pcms->epc_size = value;
+}
+
 static void pc_machine_initfn(Object *obj)
 {
     PCMachineState *pcms = PC_MACHINE(obj);
@@ -2371,6 +2428,37 @@ static void x86_nmi(NMIState *n, int cpu_index, Error **errp)
     }
 }
 
+void pc_machine_init_sgx_epc(MachineState *machine)
+{
+    PCMachineState *pcms = PC_MACHINE(machine);
+    if (!pcms->epc_size) {
+        return;
+    }
+
+    if (!kvm_enabled()) {
+        error_report("Machine option '" PC_MACHINE_EPC_SIZE "' requires KVM");
+        exit(EXIT_FAILURE);
+    }
+    if (!kvm_has_sgx_epc(MACHINE(pcms))) {
+        error_report("Machine option '" PC_MACHINE_EPC_SIZE "' requires KVM "
+            "virtual EPC capability");
+        exit(EXIT_FAILURE);
+    }
+    if (nb_numa_nodes) {
+        error_report("Machine option '" PC_MACHINE_EPC_SIZE "' "
+            "cannot be used when one or more NUMA nodes are defined");
+        exit(EXIT_FAILURE);
+    }
+
+    pcms->epc_base = 0x100000000ULL + pcms->above_4g_mem_size;
+    if ((pcms->epc_base + pcms->epc_size) < pcms->epc_base ||
+        pcms->epc_base > (1ULL << TARGET_PHYS_ADDR_SPACE_BITS)) {
+        error_report("Machine option " PC_MACHINE_EPC_SIZE
+            "=0x"RAM_ADDR_FMT" causes EPC to overlap RAM", pcms->epc_size);
+        exit(EXIT_FAILURE);
+    }
+}
+
 static void pc_machine_class_init(ObjectClass *oc, void *data)
 {
     MachineClass *mc = MACHINE_CLASS(oc);
@@ -2449,6 +2537,17 @@ static void pc_machine_class_init(ObjectClass *oc, void *data)
 
     object_class_property_add_bool(oc, PC_MACHINE_PIT,
         pc_machine_get_pit, pc_machine_set_pit, &error_abort);
+
+    object_class_property_add(oc, PC_MACHINE_EPC_BASE, "int",
+        pc_machine_get_epc_base, NULL, NULL, NULL, &error_abort);
+    object_class_property_set_description(oc, PC_MACHINE_EPC_BASE,
+        "Base address of the virtual EPC, required for SGX", &error_abort);
+
+    object_class_property_add(oc, PC_MACHINE_EPC_SIZE, "size",
+        pc_machine_get_epc_size, pc_machine_set_epc_size,
+        NULL, NULL, &error_abort);
+    object_class_property_set_description(oc, PC_MACHINE_EPC_SIZE,
+        "Size of the virtual EPC, required for SGX", &error_abort);
 }
 
 static const TypeInfo pc_machine_info = {
