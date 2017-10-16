@@ -2849,6 +2849,25 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
                 *ecx |= CPUID_7_0_ECX_OSPKE;
             }
             *edx = env->features[FEAT_7_0_EDX]; /* Feature flags */
+
+            /*
+             * SGX cannot be emulated in software.  If hardware does not
+             * support enabling SGX and/or SGX flexible launch control,
+             * then we need to update the VM's CPUID values accordingly.
+             */
+            if ((*ebx & CPUID_7_0_EBX_SGX) &&
+                (!kvm_enabled() ||
+                 !(kvm_arch_get_supported_cpuid(cs->kvm_state, 0x7, 0, R_EBX) &
+                    CPUID_7_0_EBX_SGX))) {
+                *ebx &= ~CPUID_7_0_EBX_SGX;
+            }
+
+            if ((*ecx & CPUID_7_0_ECX_SGX_LC) &&
+                (!(*ebx & CPUID_7_0_EBX_SGX) || !kvm_enabled() ||
+                 !(kvm_arch_get_supported_cpuid(cs->kvm_state, 0x7, 0, R_ECX) &
+                    CPUID_7_0_ECX_SGX_LC))) {
+                *ecx &= ~CPUID_7_0_ECX_SGX_LC;
+            }
         } else {
             *eax = 0;
             *ebx = 0;
@@ -2935,6 +2954,25 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
         }
         break;
     }
+    case 0x12:
+        *eax = *ebx = *ecx = *edx = 0;
+
+        if (!kvm_enabled() ||
+           !(env->features[FEAT_7_0_EBX] & CPUID_7_0_EBX_SGX)) {
+            break;
+        }
+
+        /*
+         * The SGX sub-leafs, CPUID.0x12.{0x0, 0x1, 0x2, ...} are heavily
+         * dependent on hardware and system support, so we rely on KVM to
+         * manage them for us.  Call kvm_arch_get_supported_cpuid directly,
+         * we already have ensured that KVM is enabled.
+         */
+        *eax = kvm_arch_get_supported_cpuid(kvm_state, 0x12, count, R_EAX);
+        *ebx = kvm_arch_get_supported_cpuid(kvm_state, 0x12, count, R_EBX);
+        *ecx = kvm_arch_get_supported_cpuid(kvm_state, 0x12, count, R_ECX);
+        *edx = kvm_arch_get_supported_cpuid(kvm_state, 0x12, count, R_EDX);
+        break;
     case 0x40000000:
         /*
          * CPUID code in kvm_arch_init_vcpu() ignores stuff
