@@ -311,8 +311,7 @@ PCIBus *i440fx_init(const char *host_type, const char *pci_type,
                     MemoryRegion *address_space_mem,
                     MemoryRegion *address_space_io,
                     ram_addr_t ram_size,
-                    ram_addr_t below_4g_mem_size,
-                    ram_addr_t above_4g_mem_size,
+                    ram_addr_t pci_hole_32_start,
                     MemoryRegion *pci_memory,
                     MemoryRegion *ram_memory);
 

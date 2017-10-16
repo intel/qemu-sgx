@@ -146,6 +146,9 @@ static void pc_init1(MachineState *machine,
             pcms->above_4g_mem_size = 0;
             pcms->below_4g_mem_size = machine->ram_size;
         }
+        if (pcmc->pci_enabled) {
+            pc_machine_init_sgx_epc(machine, 0xe0000000);
+        }
     }
 
     pc_cpus_init(pcms);
@@ -193,13 +196,17 @@ static void pc_init1(MachineState *machine,
     }
 
     if (pcmc->pci_enabled) {
+        ram_addr_t pci_hole_32_start;
+        if (pcms->epc_size > 0 && pcms->epc_base < 0x100000000ULL) {
+            pci_hole_32_start = pcms->epc_base + pcms->epc_size;
+        } else {
+            pci_hole_32_start = pcms->below_4g_mem_size;
+        }
         pci_bus = i440fx_init(host_type,
                               pci_type,
                               &i440fx_state, &piix3_devfn, &isa_bus, pcms->gsi,
                               system_memory, system_io, machine->ram_size,
-                              pcms->below_4g_mem_size,
-                              pcms->above_4g_mem_size,
-                              pci_memory, ram_memory);
+                              pci_hole_32_start, pci_memory, ram_memory);
         pcms->bus = pci_bus;
     } else {
         pci_bus = NULL;
