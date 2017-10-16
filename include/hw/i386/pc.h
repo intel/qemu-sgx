@@ -58,6 +58,7 @@ struct PCMachineState {
     ram_addr_t below_4g_mem_size, above_4g_mem_size;
 
     ram_addr_t epc_size, epc_base;
+    OnOffAuto epc_below_4g;
 
     /* CPU and apic information: */
     bool apic_xrupt_override;
@@ -83,6 +84,7 @@ struct PCMachineState {
 #define PC_MACHINE_SATA             "sata"
 #define PC_MACHINE_PIT              "pit"
 #define PC_MACHINE_EPC_SIZE         "epc"
+#define PC_MACHINE_EPC_BELOW_4G     "epc-below-4g"
 
 /**
  * PCMachineClass:
@@ -233,7 +235,7 @@ void pc_hot_add_cpu(const int64_t id, Error **errp);
 void pc_acpi_init(const char *default_dsdt);
 
 void pc_guest_info_init(PCMachineState *pcms);
-void pc_machine_init_sgx_epc(MachineState *machine);
+void pc_machine_init_sgx_epc(MachineState *machine, ram_addr_t max_below_4g);
 
 #define PCI_HOST_PROP_PCI_HOLE_START   "pci-hole-start"
 #define PCI_HOST_PROP_PCI_HOLE_END     "pci-hole-end"

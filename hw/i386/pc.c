@@ -2281,6 +2281,25 @@ static void pc_machine_set_epc_size(Object *obj, Visitor *v, const char *name,
     pcms->epc_size = value;
 }
 
+static void pc_machine_get_epc_below_4g(Object *obj, Visitor *v,
+                                        const char *name, void *opaque,
+                                        Error **errp)
+{
+    PCMachineState *pcms = PC_MACHINE(obj);
+    OnOffAuto epc_below_4g = pcms->epc_below_4g;
+
+    visit_type_OnOffAuto(v, name, &epc_below_4g, errp);
+}
+
+static void pc_machine_set_epc_below_4g(Object *obj, Visitor *v,
+                                        const char *name, void *opaque,
+                                        Error **errp)
+{
+    PCMachineState *pcms = PC_MACHINE(obj);
+
+    visit_type_OnOffAuto(v, name, &pcms->epc_below_4g, errp);
+}
+
 static void pc_machine_initfn(Object *obj)
 {
     PCMachineState *pcms = PC_MACHINE(obj);
@@ -2384,7 +2403,7 @@ static void x86_nmi(NMIState *n, int cpu_index, Error **errp)
     }
 }
 
-void pc_machine_init_sgx_epc(MachineState *machine)
+void pc_machine_init_sgx_epc(MachineState *machine, ram_addr_t max_below_4g)
 {
     PCMachineState *pcms = PC_MACHINE(machine);
     if (!pcms->epc_size) {
@@ -2407,12 +2426,27 @@ void pc_machine_init_sgx_epc(MachineState *machine)
         exit(EXIT_FAILURE);
     }
 
-    pcms->epc_base = 0x100000000ULL + pcms->above_4g_mem_size;
-    if ((pcms->epc_base + pcms->epc_size) < pcms->epc_base ||
-        pcms->epc_base > (1ULL << TARGET_PHYS_ADDR_SPACE_BITS)) {
-        error_report("Machine option " PC_MACHINE_EPC_SIZE
-            "=0x"RAM_ADDR_FMT" causes EPC to overlap RAM", pcms->epc_size);
-        exit(EXIT_FAILURE);
+    if (pcms->epc_below_4g != ON_OFF_AUTO_OFF) {
+        if ((pcms->below_4g_mem_size + pcms->epc_size) <= max_below_4g) {
+            pcms->epc_base = pcms->below_4g_mem_size;
+        } else if (pcms->epc_below_4g == ON_OFF_AUTO_ON) {
+            error_report("Machine options "
+                PC_MACHINE_MAX_RAM_BELOW_4G "=0x" RAM_ADDR_FMT ", "
+                PC_MACHINE_EPC_SIZE "=0x" RAM_ADDR_FMT " and "
+                PC_MACHINE_EPC_BELOW_4G "=on cause EPC to exceed hard "
+                "limit of 0x" RAM_ADDR_FMT,
+                pcms->max_ram_below_4g, pcms->epc_size, max_below_4g);
+            exit(EXIT_FAILURE);
+        }
+    }
+    if (pcms->epc_base == 0) {
+        pcms->epc_base = 0x100000000ULL + pcms->above_4g_mem_size;
+        if ((pcms->epc_base + pcms->epc_size) < pcms->epc_base ||
+            pcms->epc_base > (1ULL << TARGET_PHYS_ADDR_SPACE_BITS)) {
+            error_report("Machine option " PC_MACHINE_EPC_SIZE
+                "=0x"RAM_ADDR_FMT" causes EPC to overlap RAM", pcms->epc_size);
+            exit(EXIT_FAILURE);
+        }
     }
 
     if (kvm_enable_virtual_epc(machine)) {
@@ -2497,6 +2531,12 @@ static void pc_machine_class_init(ObjectClass *oc, void *data)
         NULL, NULL, &error_abort);
     object_class_property_set_description(oc, PC_MACHINE_EPC_SIZE,
         "Size of the virtual EPC, required for SGX", &error_abort);
+
+    object_class_property_add(oc, PC_MACHINE_EPC_BELOW_4G, "OnOffAuto",
+        pc_machine_get_epc_below_4g, pc_machine_set_epc_below_4g,
+        NULL, NULL, &error_abort);
+    object_class_property_set_description(oc, PC_MACHINE_EPC_BELOW_4G,
+        "Reserve the virtual EPC from memory below 4g", &error_abort);
 }
 
 static const TypeInfo pc_machine_info = {
