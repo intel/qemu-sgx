@@ -170,6 +170,23 @@ static void sgx_epc_register_types(void)
 
 type_init(sgx_epc_register_types)
 
+int sgx_epc_get_section(int section_nr, uint64_t *addr, uint64_t *size)
+{
+    PCMachineState *pcms = PC_MACHINE(qdev_get_machine());
+    SGXEPCDevice *epc;
+
+    if (pcms->sgx_epc == NULL || pcms->sgx_epc->nr_sections <= section_nr) {
+        return 1;
+    }
+
+    epc = pcms->sgx_epc->sections[section_nr];
+
+    *addr = epc->addr;
+    *size = memory_device_get_region_size(MEMORY_DEVICE(epc), &error_fatal);
+
+    return 0;
+}
+
 
 static int sgx_epc_set_property(void *opaque, const char *name,
                                 const char *value, Error **errp)
