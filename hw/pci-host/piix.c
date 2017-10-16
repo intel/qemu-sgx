@@ -318,8 +318,7 @@ PCIBus *i440fx_init(const char *host_type, const char *pci_type,
                     MemoryRegion *address_space_mem,
                     MemoryRegion *address_space_io,
                     ram_addr_t ram_size,
-                    ram_addr_t below_4g_mem_size,
-                    ram_addr_t above_4g_mem_size,
+                    ram_addr_t pci_hole_32_start,
                     MemoryRegion *pci_address_space,
                     MemoryRegion *ram_memory)
 {
@@ -348,7 +347,7 @@ PCIBus *i440fx_init(const char *host_type, const char *pci_type,
     f->ram_memory = ram_memory;
 
     i440fx = I440FX_PCI_HOST_BRIDGE(dev);
-    range_set_bounds(&i440fx->pci_hole, below_4g_mem_size,
+    range_set_bounds(&i440fx->pci_hole, pci_hole_32_start,
                      IO_APIC_DEFAULT_ADDRESS - 1);
 
     /* setup pci memory mapping */
