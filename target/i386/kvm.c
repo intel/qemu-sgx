@@ -834,6 +834,16 @@ int kvm_arch_init_vcpu(CPUState *cs)
                 c = &cpuid_data.entries[cpuid_i++];
             }
             break;
+        case 0x12:
+            /* Need 3 sub-leafs for SGX leaf (CPUID 0x12) */
+            for (j = 0; j <= 2; j++) {
+                c->function = i;
+                c->flags = KVM_CPUID_FLAG_SIGNIFCANT_INDEX;
+                c->index = j;
+                cpu_x86_cpuid(env, i, j, &c->eax, &c->ebx, &c->ecx, &c->edx);
+                c = &cpuid_data.entries[cpuid_i++];
+            }
+            break;
         default:
             c->function = i;
             c->flags = 0;
