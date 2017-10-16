@@ -44,7 +44,8 @@ DEF("machine", HAS_ARG, QEMU_OPTION_machine, \
     "                nvdimm=on|off controls NVDIMM support (default=off)\n"
     "                enforce-config-section=on|off enforce configuration section migration (default=off)\n"
     "                s390-squash-mcss=on|off controls support for squashing into default css (default=off)\n"
-    "                epc=size controls size of SGX virtual EPC (default=0)\n",
+    "                epc=size controls size of SGX virtual EPC (default=0)\n"
+    "                epc-below-4g=on|off|auto controls location of SGX virtual EPC (default=auto)\n",
     QEMU_ARCH_ALL)
 STEXI
 @item -machine [type=]@var{name}[,prop=@var{value}[,...]]
@@ -110,6 +111,13 @@ Defines the size of the guest's SGX virtual EPC, required for running
 SGX enclaves in the guest.  Enabling virtual EPC (size>0) requires SGX
 hardware and KVM support, i.e. KVM_CAP_X86_VIRTUAL_EPC, and will cause
 Qemu to fail if the necessary support is not available.  The default is 0.
+@item epc-below-4g=on|off|auto
+Controls the location of the SGX virtual EPC in the physical address space.
+On forces the EPC to be located below 4g (e.g. between RAM and MCFG).  Off
+forces the EPC to be located above 4g (e.g. between RAM and memory hotplug
+base).  Auto attempts to locate the EPC below the 4g boundary and falls back
+to above 4g if necessary, e.g. EPC cannot fit below 4g.  Qemu will fail if
+EPC cannot be placed in the requested location.  Default is auto.
 @end table
 ETEXI
 
