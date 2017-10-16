@@ -43,7 +43,8 @@ DEF("machine", HAS_ARG, QEMU_OPTION_machine, \
     "                suppress-vmdesc=on|off disables self-describing migration (default=off)\n"
     "                nvdimm=on|off controls NVDIMM support (default=off)\n"
     "                enforce-config-section=on|off enforce configuration section migration (default=off)\n"
-    "                s390-squash-mcss=on|off controls support for squashing into default css (default=off)\n",
+    "                s390-squash-mcss=on|off controls support for squashing into default css (default=off)\n"
+    "                epc=size controls size of SGX virtual EPC (default=0)\n",
     QEMU_ARCH_ALL)
 STEXI
 @item -machine [type=]@var{name}[,prop=@var{value}[,...]]
@@ -104,6 +105,11 @@ code to send configuration section even if the machine-type sets the
 @option{migration.send-configuration} property to @var{off}.
 NOTE: this parameter is deprecated. Please use @option{-global}
 @option{migration.send-configuration}=@var{on|off} instead.
+@item epc=size
+Defines the size of the guest's SGX virtual EPC, required for running
+SGX enclaves in the guest.  Enabling virtual EPC (size>0) requires SGX
+hardware and KVM support, i.e. KVM_CAP_X86_VIRTUAL_EPC, and will cause
+Qemu to fail if the necessary support is not available.  The default is 0.
 @end table
 ETEXI
 
