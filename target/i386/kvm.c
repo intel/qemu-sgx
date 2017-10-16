@@ -2229,6 +2229,17 @@ static int kvm_put_msrs(X86CPU *cpu, int level)
         }
     }
 
+    if (env->msr_ia32_feature_control & FEATURE_CONTROL_SGX_LC) {
+        kvm_msr_entry_add(cpu, MSR_IA32_SGXLEPUBKEYHASH0,
+            env->msr_ia32_sgxlepubkeyhash[0]);
+        kvm_msr_entry_add(cpu, MSR_IA32_SGXLEPUBKEYHASH1,
+            env->msr_ia32_sgxlepubkeyhash[1]);
+        kvm_msr_entry_add(cpu, MSR_IA32_SGXLEPUBKEYHASH2,
+            env->msr_ia32_sgxlepubkeyhash[2]);
+        kvm_msr_entry_add(cpu, MSR_IA32_SGXLEPUBKEYHASH3,
+            env->msr_ia32_sgxlepubkeyhash[3]);
+    }
+
     ret = kvm_vcpu_ioctl(CPU(cpu), KVM_SET_MSRS, cpu->kvm_msr_buf);
     if (ret < 0) {
         return ret;
@@ -2546,6 +2557,13 @@ static int kvm_get_msrs(X86CPU *cpu)
         for (i = 0; i < addr_num; i++) {
             kvm_msr_entry_add(cpu, MSR_IA32_RTIT_ADDR0_A + i, 0);
         }
+    }
+
+    if (env->msr_ia32_feature_control & FEATURE_CONTROL_SGX_LC) {
+        kvm_msr_entry_add(cpu, MSR_IA32_SGXLEPUBKEYHASH0, 0);
+        kvm_msr_entry_add(cpu, MSR_IA32_SGXLEPUBKEYHASH1, 0);
+        kvm_msr_entry_add(cpu, MSR_IA32_SGXLEPUBKEYHASH2, 0);
+        kvm_msr_entry_add(cpu, MSR_IA32_SGXLEPUBKEYHASH3, 0);
     }
 
     ret = kvm_vcpu_ioctl(CPU(cpu), KVM_GET_MSRS, cpu->kvm_msr_buf);
