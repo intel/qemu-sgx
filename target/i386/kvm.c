@@ -168,6 +168,12 @@ bool kvm_hv_vpindex_settable(void)
     return hv_vpindex_settable;
 }
 
+bool kvm_has_sgx_epc(MachineState *machine)
+{
+    KVMState *s = KVM_STATE(machine->accelerator);
+    return kvm_vm_check_extension(s, KVM_CAP_X86_SGX_EPC);
+}
+
 static int kvm_get_tsc(CPUState *cs)
 {
     X86CPU *cpu = X86_CPU(cs);

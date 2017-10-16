@@ -24,11 +24,13 @@
 #define kvm_ioapic_in_kernel() \
     (kvm_irqchip_in_kernel() && !kvm_irqchip_is_split())
 
+bool kvm_has_sgx_epc(MachineState *machine);
 #else
 
 #define kvm_pit_in_kernel()      0
 #define kvm_pic_in_kernel()      0
 #define kvm_ioapic_in_kernel()   0
+#define kvm_has_sgx_epc(x)       0
 
 #endif  /* CONFIG_KVM */
 
