@@ -157,6 +157,26 @@ bool kvm_enable_x2apic(void)
              has_x2apic_api);
 }
 
+#ifdef KVM_CAP_X86_VIRTUAL_EPC
+bool kvm_has_virtual_epc(MachineState *machine)
+{
+    KVMState *s = KVM_STATE(machine->accelerator);
+    return kvm_vm_check_extension(s, KVM_CAP_X86_VIRTUAL_EPC);
+}
+
+int kvm_enable_virtual_epc(MachineState *machine)
+{
+    PCMachineState *pcms = PC_MACHINE(machine);
+    KVMState *s = KVM_STATE(machine->accelerator);
+    int ret = kvm_vm_enable_cap(s, KVM_CAP_X86_VIRTUAL_EPC, 0,
+                                pcms->epc_base, pcms->epc_size);
+    if (ret) {
+        error_report("KVM enable virtual EPC failed: %s", strerror(errno));
+    }
+    return ret;
+}
+#endif
+
 static int kvm_get_tsc(CPUState *cs)
 {
     X86CPU *cpu = X86_CPU(cs);

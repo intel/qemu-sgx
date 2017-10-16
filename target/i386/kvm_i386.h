@@ -69,4 +69,17 @@ void kvm_put_apicbase(X86CPU *cpu, uint64_t value);
 
 bool kvm_enable_x2apic(void);
 bool kvm_has_x2apic_api(void);
+
+#ifdef KVM_CAP_X86_VIRTUAL_EPC
+bool kvm_has_virtual_epc(MachineState *machine);
+int kvm_enable_virtual_epc(MachineState *machine);
+#else
+#define kvm_has_virtual_epc(x) (false)
+static inline int kvm_enable_virtual_epc(MachineState *machine)
+{
+    fprintf(stderr, "kvm_enable_virtual_epc invoked without checking CAP\n");
+    abort();
+}
+#endif
+
 #endif
