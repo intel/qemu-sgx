@@ -65,4 +65,17 @@ bool kvm_enable_x2apic(void);
 bool kvm_has_x2apic_api(void);
 
 bool kvm_hv_vpindex_settable(void);
+
+#ifdef KVM_CAP_X86_SGX_EPC
+bool kvm_has_sgx_epc(MachineState *machine);
+int kvm_set_sgx_epc(MachineState *machine);
+#else
+#define kvm_has_sgx_epc(x) (false)
+static inline int kvm_set_sgx_epc(MachineState *machine)
+{
+    fprintf(stderr, "kvm_set_sgx_epc invoked without checking CAP\n");
+    abort();
+}
+#endif
+
 #endif

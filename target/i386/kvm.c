@@ -168,6 +168,31 @@ bool kvm_hv_vpindex_settable(void)
     return hv_vpindex_settable;
 }
 
+#ifdef KVM_CAP_X86_SGX_EPC
+bool kvm_has_sgx_epc(MachineState *machine)
+{
+    KVMState *s = KVM_STATE(machine->accelerator);
+    return kvm_vm_check_extension(s, KVM_CAP_X86_SGX_EPC);
+}
+
+int kvm_set_sgx_epc(MachineState *machine)
+{
+    PCMachineState *pcms = PC_MACHINE(machine);
+    KVMState *kvm_state = KVM_STATE(machine->accelerator);
+
+    struct kvm_x86_sgx_epc epc = {
+        .base = pcms->epc_base,
+        .size = pcms->epc_size,
+    };
+
+    int ret = kvm_vm_ioctl(kvm_state, KVM_X86_SET_SGX_EPC, &epc);
+    if (ret) {
+        error_report("KVM enable virtual EPC failed: %s", strerror(errno));
+    }
+    return ret;
+}
+#endif
+
 static int kvm_get_tsc(CPUState *cs)
 {
     X86CPU *cpu = X86_CPU(cs);
