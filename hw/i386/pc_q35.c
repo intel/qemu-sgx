@@ -117,6 +117,11 @@ static void pc_q35_init(MachineState *machine)
 
     if (xen_enabled()) {
         xen_hvm_init(pcms, &ram_memory);
+    } else {
+        /* EPC must not overlap MCFG/PCIEXBAR, which is hardcoded by
+         * the default OVMF build to 0x80000000 for Q35 machines.
+         */
+        pc_machine_init_sgx_epc(machine, 0x80000000);
     }
 
     pc_cpus_init(pcms);
