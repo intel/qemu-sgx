@@ -4115,11 +4115,33 @@ void cpu_x86_cpuid(CPUX86State *env, uint32_t index, uint32_t count,
         }
 
         /*
-         * SGX sub-leafs CPUID.0x12.{0x2..N} enumerate EPC sections.  Report
-         * zeros until EPC virtualization is in place.
+         * SGX sub-leafs CPUID.0x12.{0x2..N} enumerate EPC sections.  Propagate
+         * the EPC information to CPUID as a single EPC section at sub-leaf 2.
+         * SGX architecture allows for multiple EPC sections, e.g. for NUMA,
+         * but enumerating multiple sections serves no known purpose at this
+         * time as there's nothing tying the virtual EPC to specific sections
+         * of physical EPC.  This may change if/when hotplugging virtual EPC is
+         * supported.  Retrieve confidentiality and integrity information about
+         * the EPC from the host.
          */
-        if (count >= 2) {
+        if (count > 2) {
             *eax = *ebx = *ecx = *edx = 0;
+            break;
+        }
+        if (count == 2) {
+            Object *pcms = qdev_get_machine();
+            uint64_t epc_base = object_property_get_uint(pcms, "epc-base", NULL);
+            uint64_t epc_size = object_property_get_uint(pcms, "epc", NULL);
+
+            if (!epc_size) {
+                *eax = *ebx = *ecx = *edx = 0;
+                break;
+            }
+            host_cpuid(index, 2, eax, ebx, ecx, edx);
+            *eax = (uint32_t)(epc_base & 0xfffff000) | 0x1;
+            *ebx = (uint32_t)(epc_base >> 32);
+            *ecx = (uint32_t)(epc_size & 0xfffff000) | (*ecx & 0xf);
+            *edx = (uint32_t)(epc_size >> 32);
             break;
         }
 
