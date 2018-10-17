@@ -380,6 +380,9 @@ static int kvm_mem_flags(MemoryRegion *mr)
     bool readonly = mr->readonly || memory_region_is_romd(mr);
     int flags = 0;
 
+    if (memory_region_is_sgx_epc(mr))
+        return KVM_MEM_SGX_EPC;
+
     if (memory_region_get_dirty_log_mask(mr) != 0) {
         flags |= KVM_MEM_LOG_DIRTY_PAGES;
     }
@@ -723,7 +726,11 @@ static void kvm_set_phys_mem(KVMMemoryListener *kml,
     hwaddr start_addr, size;
     void *ram;
 
-    if (!memory_region_is_ram(mr)) {
+    if (kml->as_id != 0 && memory_region_is_sgx_epc(mr)) {
+        return;
+    }
+
+    if (!memory_region_is_ram(mr) && !memory_region_is_sgx_epc(mr)) {
         if (writeable || !kvm_readonly_mem_allowed) {
             return;
         } else if (!mr->romd_mode) {
@@ -738,9 +745,13 @@ static void kvm_set_phys_mem(KVMMemoryListener *kml,
         return;
     }
 
-    /* use aligned delta to align the ram address */
-    ram = memory_region_get_ram_ptr(mr) + section->offset_within_region +
-          (start_addr - section->offset_within_address_space);
+    if (memory_region_is_sgx_epc(mr)) {
+        ram = MAP_FAILED;
+    } else {
+        /* use aligned delta to align the ram address */
+        ram = memory_region_get_ram_ptr(mr) + section->offset_within_region +
+            (start_addr - section->offset_within_address_space);
+    }
 
     if (!add) {
         mem = kvm_lookup_matching_slot(kml, start_addr, size);
