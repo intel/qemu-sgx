@@ -217,6 +217,7 @@ struct FlatRange {
     uint8_t dirty_log_mask;
     bool romd_mode;
     bool readonly;
+    bool sgx_epc;
 };
 
 #define FOR_EACH_FLAT_RANGE(var, view)          \
@@ -241,7 +242,8 @@ static bool flatrange_equal(FlatRange *a, FlatRange *b)
         && addrrange_equal(a->addr, b->addr)
         && a->offset_in_region == b->offset_in_region
         && a->romd_mode == b->romd_mode
-        && a->readonly == b->readonly;
+        && a->readonly == b->readonly
+        && a->sgx_epc == b->sgx_epc;
 }
 
 static FlatView *flatview_new(MemoryRegion *mr_root)
@@ -313,7 +315,8 @@ static bool can_merge(FlatRange *r1, FlatRange *r2)
                      int128_make64(r2->offset_in_region))
         && r1->dirty_log_mask == r2->dirty_log_mask
         && r1->romd_mode == r2->romd_mode
-        && r1->readonly == r2->readonly;
+        && r1->readonly == r2->readonly
+        && r1->sgx_epc == r2->sgx_epc;
 }
 
 /* Attempt to simplify a view by merging adjacent ranges */
@@ -669,6 +672,7 @@ static void render_memory_region(FlatView *view,
     fr.dirty_log_mask = memory_region_get_dirty_log_mask(mr);
     fr.romd_mode = mr->romd_mode;
     fr.readonly = readonly;
+    fr.sgx_epc = mr->sgx_epc;
 
     /* Render the region itself into any gaps left by the current view. */
     for (i = 0; i < view->nr && int128_nz(remain); ++i) {
@@ -3226,6 +3230,16 @@ void memory_region_init_rom_device(MemoryRegion *mr,
      */
     owner_dev = DEVICE(owner);
     vmstate_register_ram(mr, owner_dev);
+}
+
+void memory_region_init_sgx_epc(MemoryRegion *mr,
+                                struct Object *owner,
+                                const char *name,
+                                uint64_t size)
+{
+    memory_region_init(mr, owner, name, size);
+    mr->sgx_epc = true;
+    mr->terminates = true;
 }
 
 static const TypeInfo memory_region_info = {

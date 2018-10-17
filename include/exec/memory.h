@@ -351,6 +351,7 @@ struct MemoryRegion {
     bool global_locking;
     uint8_t dirty_log_mask;
     bool is_iommu;
+    bool sgx_epc;
     RAMBlock *ram_block;
     Object *owner;
 
@@ -904,6 +905,22 @@ void memory_region_init_rom_device(MemoryRegion *mr,
                                    uint64_t size,
                                    Error **errp);
 
+/**
+ * memory_region_init_sgx_epc - Initialize SGX EPC memory region
+ *
+ * @mr: the #MemoryRegion to be initialized
+ * @owner: the object that tracks the region's reference count (must be
+ *         TYPE_DEVICE or a subclass of TYPE_DEVICE, or NULL)
+ * @name: name of the memory region
+ * @size: size of the region in bytes
+ * @errp: pointer to Error*, to store an error if it happens.
+ *
+ */
+void memory_region_init_sgx_epc(MemoryRegion *mr,
+                                struct Object *owner,
+                                const char *name,
+                                uint64_t size);
+
 
 /**
  * memory_region_owner: get a memory region's owner.
@@ -988,6 +1005,18 @@ static inline IOMMUMemoryRegionClass *memory_region_get_iommu_class_nocheck(
 }
 
 #define memory_region_is_iommu(mr) (memory_region_get_iommu(mr) != NULL)
+
+/**
+ * memory_region_is_sgx_epc: check whether a memory region is SGX EPC
+ *
+ * Returns %true if a memory region is SGX EPC
+ *
+ * @mr: the memory region being queried
+ */
+static inline bool memory_region_is_sgx_epc(MemoryRegion *mr)
+{
+    return mr->sgx_epc;
+}
 
 /**
  * memory_region_iommu_get_min_page_size: get minimum supported page size
