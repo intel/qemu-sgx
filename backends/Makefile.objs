@@ -15,3 +15,4 @@ common-obj-$(CONFIG_VHOST_CRYPTO) += cryptodev-vhost-user.o
 endif
 
 common-obj-$(CONFIG_LINUX) += hostmem-memfd.o
+common-obj-$(CONFIG_LINUX) += hostmem-epc.o
