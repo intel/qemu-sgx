@@ -16,3 +16,4 @@ common-obj-$(call land,$(CONFIG_VHOST_USER),$(CONFIG_LINUX)) += \
 endif
 
 common-obj-$(CONFIG_LINUX) += hostmem-memfd.o
+common-obj-$(CONFIG_LINUX) += hostmem-epc.o
