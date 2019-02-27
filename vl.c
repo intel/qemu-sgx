@@ -143,6 +143,7 @@ const char* keyboard_layout = NULL;
 ram_addr_t ram_size;
 const char *mem_path = NULL;
 int mem_prealloc = 0; /* force preallocation of physical target memory */
+int sgx_epc_enabled = 0;
 bool enable_mlock = false;
 bool enable_cpu_pm = false;
 int nb_nics;
@@ -3313,6 +3314,14 @@ int main(int argc, char **argv, char **envp)
                 break;
             case QEMU_OPTION_mem_prealloc:
                 mem_prealloc = 1;
+                break;
+            case QEMU_OPTION_sgx_epc:
+                opts = qemu_opts_parse_noisily(qemu_find_opts("sgx-epc"),
+                                               optarg, false);
+                if (!opts) {
+                    exit(1);
+                }
+                sgx_epc_enabled = 1;
                 break;
             case QEMU_OPTION_d:
                 log_mask = optarg;
