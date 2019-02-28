@@ -125,6 +125,8 @@ static void pc_q35_init(MachineState *machine)
 
     if (xen_enabled()) {
         xen_hvm_init(pcms, &ram_memory);
+    } else {
+        pc_machine_init_sgx_epc(pcms);
     }
 
     pc_cpus_init(pcms);
