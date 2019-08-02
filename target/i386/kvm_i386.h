@@ -65,4 +65,7 @@ bool kvm_enable_x2apic(void);
 bool kvm_has_x2apic_api(void);
 
 bool kvm_hv_vpindex_settable(void);
+
+bool kvm_enable_sgx_provisioning(KVMState *s);
+
 #endif
