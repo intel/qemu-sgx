@@ -48,4 +48,6 @@ bool kvm_has_waitpkg(void);
 
 bool kvm_hv_vpindex_settable(void);
 
+bool kvm_enable_sgx_provisioning(KVMState *s);
+
 #endif
