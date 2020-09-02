@@ -60,4 +60,16 @@ extern int sgx_epc_enabled;
 void pc_machine_init_sgx_epc(PCMachineState *pcms);
 int sgx_epc_get_section(int section_nr, uint64_t *addr, uint64_t *size);
 
+static inline bool sgx_epc_above_4g(SGXEPCState *sgx_epc)
+{
+    return sgx_epc != NULL;
+}
+
+static inline uint64_t sgx_epc_above_4g_end(SGXEPCState *sgx_epc)
+{
+    assert(sgx_epc != NULL && sgx_epc->base >= 0x100000000ULL);
+
+    return sgx_epc->base + sgx_epc->size;
+}
+
 #endif
