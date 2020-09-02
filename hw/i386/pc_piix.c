@@ -154,6 +154,9 @@ static void pc_init1(MachineState *machine,
             x86ms->above_4g_mem_size = 0;
             x86ms->below_4g_mem_size = machine->ram_size;
         }
+        if (pcmc->pci_enabled) {
+            pc_machine_init_sgx_epc(pcms);
+        }
     }
 
     x86_cpus_init(x86ms, pcmc->default_cpu_version);
