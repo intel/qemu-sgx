@@ -1575,17 +1575,18 @@ void memory_region_init_ram_from_fd(MemoryRegion *mr,
                                     const char *name,
                                     uint64_t size,
                                     bool share,
+                                    bool protected,
                                     int fd,
                                     Error **errp)
 {
+    uint32_t ram_flags = (share ? RAM_SHARED : 0) |
+                         (protected ? RAM_PROTECTED : 0);
     Error *err = NULL;
     memory_region_init(mr, owner, name, size);
     mr->ram = true;
     mr->terminates = true;
     mr->destructor = memory_region_destructor_ram;
-    mr->ram_block = qemu_ram_alloc_from_fd(size, mr,
-                                           share ? RAM_SHARED : 0,
-                                           fd, &err);
+    mr->ram_block = qemu_ram_alloc_from_fd(size, mr, ram_flags, fd, &err);
     mr->dirty_log_mask = tcg_enabled() ? (1 << DIRTY_MEMORY_CODE) : 0;
     if (err) {
         mr->size = int128_zero();
@@ -1772,6 +1773,11 @@ const char *memory_region_name(const MemoryRegion *mr)
 bool memory_region_is_ram_device(MemoryRegion *mr)
 {
     return mr->ram_device;
+}
+
+bool memory_region_is_protected(MemoryRegion *mr)
+{
+    return mr->ram && (mr->ram_block->flags & RAM_PROTECTED);
 }
 
 uint8_t memory_region_get_dirty_log_mask(MemoryRegion *mr)
