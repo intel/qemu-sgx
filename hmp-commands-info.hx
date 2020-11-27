@@ -881,4 +881,17 @@ SRST
     Show SEV information.
 ERST
 
+#if defined(TARGET_I386)
+   {
+        .name       = "sgx",
+        .args_type  = "",
+        .params     = "",
+        .help       = "show intel SGX information",
+        .cmd        = hmp_info_sgx,
+   },
+#endif
 
+SRST
+  ``info sgx``
+  Show intel SGX information.
+ERST
