@@ -532,6 +532,14 @@ SRST
     Preallocate memory when using -mem-path.
 ERST
 
+DEF("sgx-epc", HAS_ARG, QEMU_OPTION_sgx_epc,
+    "-sgx-epc memdev=memid[,id=epcid]\n",
+    QEMU_ARCH_I386)
+SRST
+``-sgx-epc memdev=@var{memid}[,id=@var{epcid}]``
+    Define an SGX EPC section.
+ERST
+
 DEF("k", HAS_ARG, QEMU_OPTION_k,
     "-k language     use keyboard layout (for example 'fr' for French)\n",
     QEMU_ARCH_ALL)

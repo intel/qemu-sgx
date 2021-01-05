@@ -74,6 +74,7 @@
 #include "hw/block/block.h"
 #include "hw/i386/x86.h"
 #include "hw/i386/pc.h"
+#include "hw/i386/sgx-epc.h"
 #include "migration/misc.h"
 #include "migration/snapshot.h"
 #include "sysemu/tpm.h"
@@ -2890,6 +2891,14 @@ void qemu_init(int argc, char **argv, char **envp)
                 break;
             case QEMU_OPTION_mem_prealloc:
                 mem_prealloc = 1;
+                break;
+            case QEMU_OPTION_sgx_epc:
+                opts = qemu_opts_parse_noisily(qemu_find_opts("sgx-epc"),
+                                               optarg, false);
+                if (!opts) {
+                    exit(1);
+                }
+                sgx_epc_enabled = 1;
                 break;
             case QEMU_OPTION_d:
                 log_mask = optarg;
