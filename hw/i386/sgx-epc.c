@@ -322,6 +322,25 @@ void pc_machine_init_sgx_epc(PCMachineState *pcms)
     memory_region_set_size(&sgx_epc->mr, sgx_epc->size);
 }
 
+SGXInfo *sgx_get_info(void)
+{
+    SGXInfo *info;
+    PCMachineState *pcms = PC_MACHINE(qdev_get_machine());
+    SGXEPCState *sgx_epc = pcms->sgx_epc;
+
+    info = g_new0(SGXInfo, 1);
+    info->sgx = true;
+    info->sgx1 = true;
+    info->sgx2 = true;
+    info->flc = true;
+
+    if (sgx_epc_enabled && sgx_epc) {
+        info->section_size = sgx_epc->size;
+    }
+
+    return info;
+}
+
 static QemuOptsList sgx_epc_opts = {
     .name = "sgx-epc",
     .implied_opt_name = "id",
